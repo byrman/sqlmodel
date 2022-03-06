@@ -1,3 +1,4 @@
+import contextlib
 import ipaddress
 import uuid
 import weakref
@@ -52,6 +53,34 @@ from sqlalchemy.sql.sqltypes import LargeBinary, Time
 from .sql.sqltypes import GUID, AutoString
 
 _T = TypeVar("_T")
+
+
+@contextlib.contextmanager
+def allow_object_mutation(obj: BaseModel):
+    """Allow object mutation."""
+    if hasattr(obj.Config, "allow_mutation"):
+        keep = obj.Config.allow_mutation
+        obj.Config.allow_mutation = True
+        yield
+        obj.Config.allow_mutation = keep
+    else:
+        yield
+
+
+@contextlib.contextmanager
+def allow_field_mutation(obj: BaseModel, name: str):
+    """Allow field mutation when initializing."""
+    field = obj.__fields__.get(name)
+    if hasattr(obj, name) or field is None:
+        # Assignment
+        yield
+    else:
+        # Initialization
+        with allow_object_mutation(obj):
+            keep = field.field_info.allow_mutation
+            field.field_info.allow_mutation = True
+            yield
+            field.field_info.allow_mutation = keep
 
 
 def __dataclass_transform__(
@@ -525,7 +554,8 @@ class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry
             # Set in Pydantic model to trigger possible validation changes, only for
             # non relationship values
             if name not in self.__sqlmodel_relationships__:
-                super().__setattr__(name, value)
+                with allow_field_mutation(self, name):
+                    super().__setattr__(name, value)
 
     @classmethod
     def from_orm(
