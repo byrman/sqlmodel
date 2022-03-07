@@ -7,6 +7,8 @@ def test_mutation_1(clear_sqlmodel):
 
     For consistency with pydantic, this test should pass.
 
+    https://github.com/tiangolo/sqlmodel/issues/262
+
     """
 
     class TestModel(SQLModel):
@@ -26,6 +28,8 @@ def test_mutation_2(clear_sqlmodel):
     """Test immutable model with mutable field.
 
     For consistency with pydantic, this test should pass.
+
+    https://github.com/tiangolo/sqlmodel/issues/262
 
     """
 
